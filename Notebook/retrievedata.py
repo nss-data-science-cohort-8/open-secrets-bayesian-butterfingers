@@ -4,6 +4,7 @@ import pandas as pd
 from io import StringIO
 import tqdm
 from bs4 import BeautifulSoup
+import re
 
 def retrieve_2020_state_district_data(state: str, district: int) -> pd.DataFrame:
     """
@@ -39,16 +40,16 @@ def retrieve_2020_state_district_data(state: str, district: int) -> pd.DataFrame
     if len(state) > 2:
         closest_match, score = process.extractOne(state, states_list, scorer=fuzz.ratio)
         if score < 100:
-            print(f'No state by this name. Assuming you meant {closest_match}.')
+            print(f"No state by the name '{state}'. Assuming you meant '{closest_match}'.")
             state_district_url = base_url+state_abr_dict[closest_match]+district_num
         else:
             state_district_url = base_url+state+district_num
     elif len(state) < 2:
-        raise ValueError(f'No state could be found under the name {state}. Please use a full abbreviation or state name.')
+        raise ValueError(f"No state could be found under the name '{state}'. Please use a full abbreviation or state name.")
     else:
         closest_match, score = process.extractOne(state, abbr_list, scorer=fuzz.ratio)
         if score < 100:
-            print(f'No state abbreviation by this name. Assuming you meant {closest_match}.')
+            print(f"No state abbreviation by the name '{state}'. Assuming you meant '{closest_match}'.")
             state_district_url = base_url+closest_match+district_num
         else:
             state_district_url = base_url+state+district_num
@@ -58,6 +59,9 @@ def retrieve_2020_state_district_data(state: str, district: int) -> pd.DataFrame
     state_distr_df = pd.read_csv(StringIO(response.text), sep=',')
     state_distr_df.insert(0, 'State_Abbreviation', closest_match if len(state)==2 else state_abr_dict[closest_match])
     state_distr_df.insert(1, 'District', district_num)
+    state_distr_df.insert(4, 'Party', state_distr_df['FirstLastP'].apply(lambda x: re.sub(r'[()]', '', x.split()[-1])))
+    state_distr_df['FirstLastP'] = state_distr_df['FirstLastP'].apply(lambda x: ' '.join(x.split()[:-1]))
+    state_distr_df = state_distr_df.rename(columns={'FirstLastP':'FirstLast'})
     return state_distr_df
 
 def get_all_data(states: list = None) -> pd.DataFrame:
@@ -126,7 +130,7 @@ def get_all_data(states: list = None) -> pd.DataFrame:
                 closest_match = get_closest_match(state, state_abbreviations)
                 abbreviation = closest_match
 
-            for district in range(1, int(state_district_dict[abbreviation]) + 1):
+            for district in tqdm.tqdm(range(1, int(state_district_dict[abbreviation]) + 1)):
                 data_list.append(retrieve_2020_state_district_data(abbreviation, district))
     else:
         for state in tqdm.tqdm(state_district_dict):
