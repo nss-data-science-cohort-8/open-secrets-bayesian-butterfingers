@@ -11,9 +11,10 @@ state_district_dict = None
 states_df = None
 state_to_abr_dict = None
 abr_to_state_dict = None
+state_representatives_df = None
 
 def setup_state_data():
-    global state_district_dict, states_df, state_to_abr_dict, abr_to_state_dict
+    global state_district_dict, states_df, state_to_abr_dict, abr_to_state_dict, state_representatives_df
 
     if state_district_dict is None or states_df is None or state_to_abr_dict is None or abr_to_state_dict is None:
         #Retrieve and parse state abbreviation data
